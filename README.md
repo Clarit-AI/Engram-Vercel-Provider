@@ -91,6 +91,17 @@ await clarit.snapshots.delete({
 });
 ```
 
+## Built-in Agent Skills
+
+This repo ships Claude Code / agent skills in `.claude/skills/` that give AI assistants working knowledge of the systems this provider touches — no extra setup required:
+
+| Skill | Purpose |
+|-------|---------|
+| `vercel-ai-provider-spec` | Vercel AI SDK Language Model spec (V3/V4), type reference, and upgrade patterns |
+| `engram-sglang` | Engram server architecture, snapshot API contract, server flags, model compatibility matrix |
+
+If you're using Claude Code, these are loaded automatically. For other agents, the Markdown content in each `SKILL.md` and its `references/` directory is designed to be consumable as-is.
+
 ## License
 
 Apache-2.0
