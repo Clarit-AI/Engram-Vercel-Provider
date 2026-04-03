@@ -6,6 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `@clarit.ai/vercel-ai-provider` — a Vercel AI SDK provider for [Engram](https://github.com/clarit-ai/engram) (Clarit), adding persistent Mamba state as a drop-in. It wraps `@ai-sdk/openai-compatible` and intercepts generation calls to add auto-save snapshots and restore-and-generate capabilities.
 
+## Publishing
+
+Bump `version` in `package.json`, push to `main`, then create a GitHub Release — the `publish.yml` workflow builds, tests, and publishes to npm automatically. Requires `NPM_TOKEN` secret in repo settings.
+
 ## Commands
 
 ```bash
