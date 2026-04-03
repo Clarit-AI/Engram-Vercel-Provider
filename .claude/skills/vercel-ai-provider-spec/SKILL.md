@@ -7,7 +7,7 @@ description: Reference for the Vercel AI SDK Language Model Specification V4. Th
 
 ## Purpose
 
-This skill provides the Language Model Specification V4 reference for building custom providers compatible with the Vercel AI SDK (`ai` package >=4.0.0). Use it when working on `@clarit.ai/vercel-ai-provider` or any custom AI SDK provider implementation.
+This skill provides the Language Model Specification V4 reference for building custom providers compatible with the Vercel AI SDK (`ai` package ^6.0.0). Use it when working on `@clarit.ai/vercel-ai-provider` or any custom AI SDK provider implementation.
 
 ## When to Use
 
@@ -173,6 +173,6 @@ Standardized error types from `@ai-sdk/provider`:
 
 ## References
 
-See `references/v3-spec-full.md` for the step-by-step implementation guide (V3 patterns still apply to V4 — the structure is the same, just with more option fields and the `supportedUrls` requirement).
+See `references/v3-spec-full.md` for the step-by-step implementation guide (many V3 implementation patterns still apply to V4 — V4 introduces expanded/required contracts (for example `supportedUrls` and richer option/part fields)).
 
 See `references/v4-spec-types.md` for the complete V4 type definitions from the Vercel AI SDK source.

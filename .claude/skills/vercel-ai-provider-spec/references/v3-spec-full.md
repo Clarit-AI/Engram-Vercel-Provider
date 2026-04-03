@@ -25,6 +25,7 @@ interface CustomProviderSettings {
   baseURL?: string;
   apiKey?: string;
   headers?: Record<string, string>;
+  generateId?: () => string;
 }
 
 function createCustom(options: CustomProviderSettings = {}): CustomProvider {
@@ -70,9 +71,10 @@ import { LanguageModelV3, LanguageModelV3CallOptions } from '@ai-sdk/provider';
 import { postJsonToApi } from '@ai-sdk/provider-utils';
 
 class CustomChatLanguageModel implements LanguageModelV3 {
-  readonly specificationVersion = 'V3';
+  readonly specificationVersion = 'v3';
   readonly provider: string;
   readonly modelId: string;
+  private config: CustomChatConfig;
 
   constructor(
     modelId: string,
@@ -81,6 +83,7 @@ class CustomChatLanguageModel implements LanguageModelV3 {
   ) {
     this.provider = config.provider;
     this.modelId = modelId;
+    this.config = config;
   }
 
   private getArgs(options: LanguageModelV3CallOptions) {
