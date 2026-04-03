@@ -46,15 +46,15 @@
     "url": "https://github.com/Clarit-AI/vercel-ai-provider"
   },
   "peerDependencies": {
-    "ai": ">=4.0.0"
+    "ai": ">=5.0.0"
   },
   "dependencies": {
-    "@ai-sdk/openai-compatible": "^0.2.0",
-    "@ai-sdk/provider": "^1.1.0",
-    "@ai-sdk/provider-utils": "^2.2.0"
+    "@ai-sdk/openai-compatible": "^2.0.0",
+    "@ai-sdk/provider": "^3.0.0",
+    "@ai-sdk/provider-utils": "^4.0.0"
   },
   "devDependencies": {
-    "ai": "^4.3.0",
+    "ai": "^5.0.0",
     "tsup": "^8.4.0",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0",

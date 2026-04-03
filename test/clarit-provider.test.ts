@@ -6,39 +6,43 @@ import { createClarit } from '../src/clarit-provider.js';
 import { ClaritChatModel } from '../src/clarit-chat-model.js';
 import { ClaritSnapshotClient } from '../src/snapshots/snapshot-client.js';
 import { ClaritValidationError } from '../src/errors.js';
-import type { LanguageModelV1 } from '@ai-sdk/provider';
+import type { LanguageModelV3 } from '@ai-sdk/provider';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function createMockBaseModel(): LanguageModelV1 {
+function createMockBaseModel(): LanguageModelV3 {
   return {
-    specificationVersion: 'v1',
+    specificationVersion: 'v3',
     provider: 'clarit.chat',
     modelId: 'granite-4.0-h-small',
-    defaultObjectGenerationMode: undefined,
+    supportedUrls: () => ({}),
     doGenerate: vi.fn().mockResolvedValue({
-      text: 'Hello from Granite!',
-      finishReason: 'stop',
-      usage: { promptTokens: 10, completionTokens: 5 },
-      rawCall: { rawPrompt: [], rawSettings: {} },
-      rawResponse: { headers: undefined, id: 'req-abc' },
+      content: [{ type: 'text', text: 'Hello from Granite!' }],
+      finishReason: { unified: 'stop', raw: 'stop' },
+      usage: {
+        inputTokens: { total: 10, noCache: undefined, cacheRead: undefined, cacheWrite: undefined },
+        outputTokens: { total: 5, text: undefined, reasoning: undefined },
+      },
+      response: { id: 'req-abc', body: { id: 'req-abc' } },
       warnings: [],
     }),
     doStream: vi.fn().mockResolvedValue({
       stream: new ReadableStream({
         start(controller) {
-          controller.enqueue({ type: 'text-delta', textDelta: 'Hello' });
+          controller.enqueue({ type: 'stream-start', warnings: [] });
+          controller.enqueue({ type: 'text-delta', id: 'text-0', delta: 'Hello' });
           controller.enqueue({
             type: 'finish',
-            finishReason: 'stop',
-            usage: { promptTokens: 10, completionTokens: 5 },
+            finishReason: { unified: 'stop', raw: 'stop' },
+            usage: {
+              inputTokens: { total: 10, noCache: undefined, cacheRead: undefined, cacheWrite: undefined },
+              outputTokens: { total: 5, text: undefined, reasoning: undefined },
+            },
           });
           controller.close();
         },
       }),
-      rawCall: { rawPrompt: [], rawSettings: {} },
-      rawResponse: { headers: undefined },
-      warnings: [],
+      response: { headers: {} },
     }),
   };
 }
@@ -89,7 +93,7 @@ describe('createClarit', () => {
 // ─── ClaritChatModel ─────────────────────────────────────────────────────────
 
 describe('ClaritChatModel', () => {
-  let baseModel: LanguageModelV1;
+  let baseModel: LanguageModelV3;
   let snapshotClient: ReturnType<typeof createMockSnapshotClient>;
   let model: ClaritChatModel;
 
@@ -105,19 +109,15 @@ describe('ClaritChatModel', () => {
   describe('standard generation (no Clarit options)', () => {
     it('delegates to base model', async () => {
       const result = await model.doGenerate({
-        inputFormat: 'messages',
-        mode: { type: 'regular' },
         prompt: [{ role: 'user', content: [{ type: 'text', text: 'Hi' }] }],
       });
 
       expect(baseModel.doGenerate).toHaveBeenCalled();
-      expect(result.text).toBe('Hello from Granite!');
+      expect(result.content).toEqual([{ type: 'text', text: 'Hello from Granite!' }]);
     });
 
     it('does not call snapshot client', async () => {
       await model.doGenerate({
-        inputFormat: 'messages',
-        mode: { type: 'regular' },
         prompt: [{ role: 'user', content: [{ type: 'text', text: 'Hi' }] }],
       });
 
@@ -128,8 +128,6 @@ describe('ClaritChatModel', () => {
   describe('auto-save snapshot', () => {
     it('saves snapshot after generation', async () => {
       const result = await model.doGenerate({
-        inputFormat: 'messages',
-        mode: { type: 'regular' },
         prompt: [{ role: 'user', content: [{ type: 'text', text: 'Hi' }] }],
         providerOptions: {
           clarit: {
@@ -138,10 +136,10 @@ describe('ClaritChatModel', () => {
             autoSaveSnapshot: true,
           },
         },
-      } as Record<string, unknown> as Parameters<typeof model.doGenerate>[0]);
+      });
 
       expect(snapshotClient.save).toHaveBeenCalledWith({
-        rid: 'req-abc', // rid extracted from rawResponse.id
+        rid: 'req-abc', // rid extracted from response.id
         conversation_id: 'session-1',
         turn_number: 1,
         branch_name: undefined,
@@ -159,8 +157,6 @@ describe('ClaritChatModel', () => {
       );
 
       const result = await model.doGenerate({
-        inputFormat: 'messages',
-        mode: { type: 'regular' },
         prompt: [{ role: 'user', content: [{ type: 'text', text: 'Hi' }] }],
         providerOptions: {
           clarit: {
@@ -168,7 +164,7 @@ describe('ClaritChatModel', () => {
             autoSaveSnapshot: true,
           },
         },
-      } as Record<string, unknown> as Parameters<typeof model.doGenerate>[0]);
+      });
 
       const claritMeta = result.providerMetadata?.clarit as Record<string, unknown>;
       expect(claritMeta?.snapshotSaved).toBe(false);
@@ -179,8 +175,6 @@ describe('ClaritChatModel', () => {
   describe('restore-and-generate', () => {
     it('calls restore endpoint instead of chat/completions', async () => {
       const result = await model.doGenerate({
-        inputFormat: 'messages',
-        mode: { type: 'regular' },
         prompt: [],
         providerOptions: {
           clarit: {
@@ -191,7 +185,7 @@ describe('ClaritChatModel', () => {
             maxNewTokens: 64,
           },
         },
-      } as Record<string, unknown> as Parameters<typeof model.doGenerate>[0]);
+      });
 
       expect(baseModel.doGenerate).not.toHaveBeenCalled();
       expect(snapshotClient.restore).toHaveBeenCalledWith({
@@ -202,13 +196,11 @@ describe('ClaritChatModel', () => {
         continuation_ids: [1, 2, 3],
         max_new_tokens: 64,
       });
-      expect(result.text).toBe('Blue is your favorite color.');
+      expect(result.content).toEqual([{ type: 'text', text: 'Blue is your favorite color.' }]);
     });
 
     it('auto-saves after restore-and-generate', async () => {
       const result = await model.doGenerate({
-        inputFormat: 'messages',
-        mode: { type: 'regular' },
         prompt: [],
         providerOptions: {
           clarit: {
@@ -219,7 +211,7 @@ describe('ClaritChatModel', () => {
             autoSaveSnapshot: true,
           },
         },
-      } as Record<string, unknown> as Parameters<typeof model.doGenerate>[0]);
+      });
 
       expect(snapshotClient.save).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -235,8 +227,6 @@ describe('ClaritChatModel', () => {
     it('throws ClaritValidationError without continuationIds', async () => {
       await expect(
         model.doGenerate({
-          inputFormat: 'messages',
-          mode: { type: 'regular' },
           prompt: [],
           providerOptions: {
             clarit: {
@@ -245,15 +235,13 @@ describe('ClaritChatModel', () => {
               maxNewTokens: 64,
             },
           },
-        } as Record<string, unknown> as Parameters<typeof model.doGenerate>[0]),
+        }),
       ).rejects.toThrow(ClaritValidationError);
     });
 
     it('throws ClaritValidationError without maxNewTokens', async () => {
       await expect(
         model.doGenerate({
-          inputFormat: 'messages',
-          mode: { type: 'regular' },
           prompt: [],
           providerOptions: {
             clarit: {
@@ -262,15 +250,13 @@ describe('ClaritChatModel', () => {
               continuationIds: [1, 2, 3],
             },
           },
-        } as Record<string, unknown> as Parameters<typeof model.doGenerate>[0]),
+        }),
       ).rejects.toThrow(ClaritValidationError);
     });
 
     it('throws ClaritValidationError without conversationId', async () => {
       await expect(
         model.doGenerate({
-          inputFormat: 'messages',
-          mode: { type: 'regular' },
           prompt: [],
           providerOptions: {
             clarit: {
@@ -279,7 +265,7 @@ describe('ClaritChatModel', () => {
               maxNewTokens: 64,
             },
           },
-        } as Record<string, unknown> as Parameters<typeof model.doGenerate>[0]),
+        }),
       ).rejects.toThrow(ClaritValidationError);
     });
   });
