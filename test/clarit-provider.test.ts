@@ -15,7 +15,7 @@ function createMockBaseModel(): LanguageModelV3 {
     specificationVersion: 'v3',
     provider: 'clarit.chat',
     modelId: 'granite-4.0-h-small',
-    supportedUrls: () => ({}),
+    supportedUrls: {},
     doGenerate: vi.fn().mockResolvedValue({
       content: [{ type: 'text', text: 'Hello from Granite!' }],
       finishReason: { unified: 'stop', raw: 'stop' },
