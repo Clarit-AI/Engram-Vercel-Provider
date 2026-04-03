@@ -51,7 +51,14 @@ export type {
 export type {
   ClaritProviderOptions,
   ClaritResponseMetadata,
+  CompatibilityFallbackReason,
 } from './clarit-provider-options.js';
+
+// Compatibility bridge
+export {
+  isAppendOnly,
+} from './compatibility.js';
+export type { AppendOnlyCheckResult } from './compatibility.js';
 
 // Chat model
 export { ClaritChatModel } from './clarit-chat-model.js';
@@ -60,6 +67,10 @@ export type { ClaritChatModelConfig } from './clarit-chat-model.js';
 // Snapshot client (also available via subpath import)
 export { ClaritSnapshotClient } from './snapshots/snapshot-client.js';
 export type { SnapshotClientConfig } from './snapshots/snapshot-client.js';
+export type {
+  TokenizeChatRequest,
+  TokenizeChatResponse,
+} from './snapshots/types.js';
 
 // Errors
 export { ClaritSnapshotError, ClaritValidationError } from './errors.js';

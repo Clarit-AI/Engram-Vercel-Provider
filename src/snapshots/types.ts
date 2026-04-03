@@ -25,6 +25,30 @@ export interface SaveSnapshotResponse {
   message?: string;
 }
 
+// ─── Tokenize Chat ───────────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────────────────
+
+/** @experimental */
+export interface TokenizeChatMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+/** @experimental */
+export interface TokenizeChatRequest {
+  messages: TokenizeChatMessage[];
+  add_generation_prompt?: boolean;
+}
+
+/** @experimental */
+export interface TokenizeChatResponse {
+  success: boolean;
+  token_ids?: number[];
+  token_count?: number;
+  chat_template_name?: string;
+  message?: string;
+}
+
 // ─── List Snapshots ──────────────────────────────────────────────────────────
 
 export interface ListSnapshotsRequest {

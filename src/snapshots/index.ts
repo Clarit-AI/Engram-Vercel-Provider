@@ -16,4 +16,7 @@ export type {
   DeleteSnapshotRequest,
   DeleteSnapshotResponse,
   SnapshotMetadata,
+  TokenizeChatMessage,
+  TokenizeChatRequest,
+  TokenizeChatResponse,
 } from './types.js';

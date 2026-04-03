@@ -20,6 +20,8 @@ import type {
   DeleteSnapshotRequest,
   DeleteSnapshotResponse,
   SnapshotMetadata,
+  TokenizeChatRequest,
+  TokenizeChatResponse,
 } from './types.js';
 
 export interface SnapshotClientConfig {
@@ -103,6 +105,22 @@ export class ClaritSnapshotClient {
     request: DeleteSnapshotRequest,
   ): Promise<DeleteSnapshotResponse> {
     return this.post<DeleteSnapshotResponse>('/delete_snapshot', request);
+  }
+
+  /**
+   * Tokenize chat messages using the server's chat template.
+   *
+   * Returns token IDs produced by applying the server's tokenizer and
+   * chat template to the provided messages. This is the authoritative
+   * tokenization source — the provider does NOT guess tokenization
+   * client-side.
+   *
+   * @experimental
+   */
+  async tokenizeChat(
+    request: TokenizeChatRequest,
+  ): Promise<TokenizeChatResponse> {
+    return this.post<TokenizeChatResponse>('/tokenize_chat', request);
   }
 
   // ─── Internal ────────────────────────────────────────────────────────────
