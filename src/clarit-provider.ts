@@ -9,7 +9,7 @@
  *
  * @example
  * ```ts
- * import { createClarit } from '@claritai/vercel-ai-provider';
+ * import { createClarit } from '@clarit.ai/vercel-ai-provider';
  * import { generateText } from 'ai';
  *
  * const clarit = createClarit({ baseURL: 'http://gpu-server:30000' });

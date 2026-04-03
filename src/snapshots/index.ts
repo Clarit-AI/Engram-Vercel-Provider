@@ -1,5 +1,5 @@
 /**
- * Public exports for the @claritai/vercel-ai-provider/snapshots subpath.
+ * Public exports for the @clarit.ai/vercel-ai-provider/snapshots subpath.
  */
 
 export { ClaritSnapshotClient } from './snapshot-client.js';

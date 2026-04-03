@@ -1,4 +1,4 @@
-# @claritai/vercel-ai-provider
+# @clarit.ai/vercel-ai-provider
 
 ### Vercel AI SDK models that remember.
 
@@ -29,7 +29,7 @@ npm install @clarit.ai/vercel-ai-provider ai
 ## Quick Start
 
 ```typescript
-import { createClarit } from '@claritai/vercel-ai-provider';
+import { createClarit } from '@clarit.ai/vercel-ai-provider';
 import { generateText } from 'ai';
 
 const clarit = createClarit({

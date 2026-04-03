@@ -1,5 +1,5 @@
 {
-  "name": "@claritai/vercel-ai-provider",
+  "name": "@clarit.ai/vercel-ai-provider",
   "version": "0.1.0",
   "description": "Vercel AI SDK provider for Clarit (Engram) — persistent Mamba state as a drop-in",
   "type": "module",
@@ -37,6 +37,10 @@
   ],
   "author": "Clarit AI",
   "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/Clarit-AI/vercel-ai-provider"

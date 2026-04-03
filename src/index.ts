@@ -1,12 +1,12 @@
 /**
- * @claritai/vercel-ai-provider
+ * @clarit.ai/vercel-ai-provider
  *
  * Vercel AI SDK provider for Clarit (Engram) — persistent Mamba state
  * as a drop-in for the JS/TS ecosystem.
  *
  * @example
  * ```ts
- * import { createClarit } from '@claritai/vercel-ai-provider';
+ * import { createClarit } from '@clarit.ai/vercel-ai-provider';
  * import { generateText } from 'ai';
  *
  * const clarit = createClarit({ baseURL: 'http://gpu-server:30000' });
