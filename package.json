@@ -1,0 +1,59 @@
+{
+  "name": "@claritai/vercel-ai-provider",
+  "version": "0.1.0",
+  "description": "Vercel AI SDK provider for Clarit (Engram) — persistent Mamba state as a drop-in",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./snapshots": {
+      "import": "./dist/snapshots/index.js",
+      "types": "./dist/snapshots/index.d.ts"
+    }
+  },
+  "files": [
+    "dist/"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "vercel",
+    "ai-sdk",
+    "clarit",
+    "engram",
+    "mamba",
+    "stateful",
+    "snapshot",
+    "sglang"
+  ],
+  "author": "Clarit AI",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Clarit-AI/vercel-ai-provider"
+  },
+  "peerDependencies": {
+    "ai": ">=4.0.0"
+  },
+  "dependencies": {
+    "@ai-sdk/openai-compatible": "^0.2.0",
+    "@ai-sdk/provider": "^1.1.0",
+    "@ai-sdk/provider-utils": "^2.2.0"
+  },
+  "devDependencies": {
+    "ai": "^4.3.0",
+    "tsup": "^8.4.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0",
+    "@types/node": "^22.0.0"
+  }
+}
