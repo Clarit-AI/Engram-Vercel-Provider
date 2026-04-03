@@ -16,7 +16,7 @@ This provider for the [Vercel AI SDK](https://sdk.vercel.ai) turns model state i
 ## Installation
 
 ```bash
-npm install @claritai/vercel-ai-provider ai
+npm install @clarit.ai/vercel-ai-provider ai
 ```
 
 ## Features
