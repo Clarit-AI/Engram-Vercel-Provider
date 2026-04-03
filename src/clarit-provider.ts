@@ -25,7 +25,7 @@
  */
 
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
-import type { LanguageModelV1 } from '@ai-sdk/provider';
+import type { LanguageModelV3 } from '@ai-sdk/provider';
 import { ClaritChatModel } from './clarit-chat-model.js';
 import { ClaritSnapshotClient } from './snapshots/snapshot-client.js';
 
@@ -71,17 +71,17 @@ export interface ClaritProvider {
    * @param modelId - The model identifier (e.g., 'granite-4.0-h-small')
    * @returns A language model with Engram-native capabilities
    */
-  (modelId: string): LanguageModelV1;
+  (modelId: string): LanguageModelV3;
 
   /**
    * Create a Clarit language model instance (explicit method).
    */
-  languageModel(modelId: string): LanguageModelV1;
+  languageModel(modelId: string): LanguageModelV3;
 
   /**
    * Create a Clarit chat model instance.
    */
-  chatModel(modelId: string): LanguageModelV1;
+  chatModel(modelId: string): LanguageModelV3;
 
   /**
    * Snapshot management utilities.
@@ -130,7 +130,7 @@ export function createClarit(
 
   // Wrap base models with Clarit-enhanced versions that add
   // auto-save and restore-and-generate capabilities
-  const createClaritModel = (modelId: string): LanguageModelV1 => {
+  const createClaritModel = (modelId: string): LanguageModelV3 => {
     const baseModel = baseProvider.chatModel(modelId);
     return new ClaritChatModel({
       baseModel,

@@ -5,13 +5,16 @@
  *
  * Wraps the OpenAI-compatible chat model from @ai-sdk/openai-compatible
  * and intercepts doGenerate/doStream to inject Clarit behavior.
+ *
+ * Implements LanguageModelV3 from @ai-sdk/provider.
  */
 
 import type {
-  LanguageModelV1,
-  LanguageModelV1CallOptions,
-  LanguageModelV1StreamPart,
-  LanguageModelV1ProviderMetadata,
+  LanguageModelV3,
+  LanguageModelV3CallOptions,
+  LanguageModelV3StreamPart,
+  LanguageModelV3GenerateResult,
+  LanguageModelV3StreamResult,
 } from '@ai-sdk/provider';
 import { ClaritSnapshotClient } from './snapshots/snapshot-client.js';
 import type { ClaritProviderOptions, ClaritResponseMetadata } from './clarit-provider-options.js';
@@ -19,14 +22,14 @@ import { ClaritValidationError, ClaritSnapshotError } from './errors.js';
 
 export interface ClaritChatModelConfig {
   /** The base OpenAI-compatible language model to delegate standard calls to. */
-  baseModel: LanguageModelV1;
+  baseModel: LanguageModelV3;
   /** Snapshot client for save/restore operations. */
   snapshotClient: ClaritSnapshotClient;
 }
 
 /**
  * Convert ClaritResponseMetadata to a JSON-safe record that satisfies
- * LanguageModelV1ProviderMetadata's Record<string, JSONValue> constraint.
+ * SharedV3ProviderMetadata's Record<string, JSONValue> constraint.
  */
 function metadataToJsonRecord(
   meta: ClaritResponseMetadata,
@@ -42,13 +45,12 @@ function metadataToJsonRecord(
   return result;
 }
 
-export class ClaritChatModel implements LanguageModelV1 {
-  readonly specificationVersion = 'v1';
+export class ClaritChatModel implements LanguageModelV3 {
+  readonly specificationVersion = 'v3';
   readonly provider: string;
   readonly modelId: string;
-  readonly defaultObjectGenerationMode: LanguageModelV1['defaultObjectGenerationMode'];
 
-  private readonly baseModel: LanguageModelV1;
+  private readonly baseModel: LanguageModelV3;
   private readonly snapshotClient: ClaritSnapshotClient;
 
   constructor(config: ClaritChatModelConfig) {
@@ -58,18 +60,17 @@ export class ClaritChatModel implements LanguageModelV1 {
     // Delegate identity from the wrapped model
     this.provider = this.baseModel.provider;
     this.modelId = this.baseModel.modelId;
-    this.defaultObjectGenerationMode = this.baseModel.defaultObjectGenerationMode;
   }
 
-  get supportsUrl() {
-    return this.baseModel.supportsUrl;
+  get supportedUrls() {
+    return this.baseModel.supportedUrls ?? {};
   }
 
   // ─── doGenerate ────────────────────────────────────────────────────────
 
   async doGenerate(
-    options: LanguageModelV1CallOptions,
-  ): Promise<Awaited<ReturnType<LanguageModelV1['doGenerate']>>> {
+    options: LanguageModelV3CallOptions,
+  ): Promise<LanguageModelV3GenerateResult> {
     const claritOpts = this.extractClaritOptions(options);
 
     // ── Restore-and-generate path ──
@@ -113,8 +114,8 @@ export class ClaritChatModel implements LanguageModelV1 {
   // ─── doStream ──────────────────────────────────────────────────────────
 
   async doStream(
-    options: LanguageModelV1CallOptions,
-  ): Promise<Awaited<ReturnType<LanguageModelV1['doStream']>>> {
+    options: LanguageModelV3CallOptions,
+  ): Promise<LanguageModelV3StreamResult> {
     const claritOpts = this.extractClaritOptions(options);
 
     // Restore-and-generate doesn't support streaming (Engram returns a
@@ -137,11 +138,11 @@ export class ClaritChatModel implements LanguageModelV1 {
 
     const originalStream = streamResult.stream;
     const transformedStream = originalStream.pipeThrough(
-      new TransformStream<LanguageModelV1StreamPart, LanguageModelV1StreamPart>({
+      new TransformStream<LanguageModelV3StreamPart, LanguageModelV3StreamPart>({
         transform(chunk, controller) {
           // Capture rid from response-metadata
           if (chunk.type === 'response-metadata') {
-            const meta = chunk as Record<string, unknown>;
+            const meta = chunk as unknown as Record<string, unknown>;
             if (typeof meta.id === 'string') {
               capturedRid = meta.id;
             }
@@ -174,9 +175,9 @@ export class ClaritChatModel implements LanguageModelV1 {
   // ─── Restore-and-generate ──────────────────────────────────────────────
 
   private async doRestoreAndGenerate(
-    _options: LanguageModelV1CallOptions,
+    _options: LanguageModelV3CallOptions,
     claritOpts: ClaritProviderOptions,
-  ): Promise<Awaited<ReturnType<LanguageModelV1['doGenerate']>>> {
+  ): Promise<LanguageModelV3GenerateResult> {
     // Validate required fields
     if (!claritOpts.continuationIds || claritOpts.continuationIds.length === 0) {
       throw new ClaritValidationError(
@@ -212,7 +213,7 @@ export class ClaritChatModel implements LanguageModelV1 {
       });
     }
 
-    // Map Engram restore response to AI SDK GenerateResult
+    // Map Engram restore response to AI SDK V3 GenerateResult
     const outputText = restoreResponse.output_text ?? '';
     const claritMeta: ClaritResponseMetadata = {
       rid: restoreResponse.rid ?? undefined,
@@ -231,31 +232,36 @@ export class ClaritChatModel implements LanguageModelV1 {
       Object.assign(claritMeta, saveResult);
     }
 
-    const providerMetadata: LanguageModelV1ProviderMetadata = {
-      clarit: metadataToJsonRecord(claritMeta),
-    };
-
     return {
-      text: outputText,
-      toolCalls: undefined,
-      finishReason: 'stop' as const,
+      content: outputText ? [{ type: 'text' as const, text: outputText }] : [],
+      finishReason: { unified: 'stop' as const, raw: 'stop' },
       usage: {
-        promptTokens: restoreResponse.token_count ?? 0,
-        completionTokens: restoreResponse.output_ids?.length ?? 0,
+        inputTokens: {
+          total: restoreResponse.token_count ?? 0,
+          noCache: undefined,
+          cacheRead: undefined,
+          cacheWrite: undefined,
+        },
+        outputTokens: {
+          total: restoreResponse.output_ids?.length ?? 0,
+          text: undefined,
+          reasoning: undefined,
+        },
       },
-      rawCall: {
-        rawPrompt: claritOpts.continuationIds,
-        rawSettings: {
+      request: {
+        body: {
           conversation_id: claritOpts.conversationId,
-          turn_number: claritOpts.turnNumber,
+          continuation_ids: claritOpts.continuationIds,
           max_new_tokens: claritOpts.maxNewTokens,
         },
       },
-      rawResponse: {
-        headers: undefined,
+      response: {
+        id: restoreResponse.rid ?? undefined,
       },
       warnings: [],
-      providerMetadata,
+      providerMetadata: {
+        clarit: metadataToJsonRecord(claritMeta),
+      },
     };
   }
 
@@ -264,19 +270,27 @@ export class ClaritChatModel implements LanguageModelV1 {
    * for the doStream path.
    */
   private async restoreAndGenerateAsStream(
-    options: LanguageModelV1CallOptions,
+    options: LanguageModelV3CallOptions,
     claritOpts: ClaritProviderOptions,
-  ): Promise<Awaited<ReturnType<LanguageModelV1['doStream']>>> {
+  ): Promise<LanguageModelV3StreamResult> {
     const generateResult = await this.doRestoreAndGenerate(options, claritOpts);
 
-    const stream = new ReadableStream<LanguageModelV1StreamPart>({
+    const stream = new ReadableStream<LanguageModelV3StreamPart>({
       start(controller) {
-        if (generateResult.text) {
+        controller.enqueue({ type: 'stream-start', warnings: [] });
+
+        // Extract text from content array
+        const textContent = generateResult.content.find(
+          (c): c is { type: 'text'; text: string } => c.type === 'text',
+        );
+        if (textContent) {
           controller.enqueue({
             type: 'text-delta',
-            textDelta: generateResult.text,
+            id: 'restore',
+            delta: textContent.text,
           });
         }
+
         controller.enqueue({
           type: 'finish',
           finishReason: generateResult.finishReason,
@@ -288,34 +302,28 @@ export class ClaritChatModel implements LanguageModelV1 {
 
     return {
       stream,
-      rawCall: generateResult.rawCall,
-      rawResponse: generateResult.rawResponse,
-      warnings: generateResult.warnings,
+      request: generateResult.request,
+      response: { headers: {} },
     };
   }
 
   // ─── Helpers ───────────────────────────────────────────────────────────
 
   private extractClaritOptions(
-    options: LanguageModelV1CallOptions,
+    options: LanguageModelV3CallOptions,
   ): ClaritProviderOptions | undefined {
-    const providerOptions = (options as Record<string, unknown>)
-      .providerOptions as Record<string, unknown> | undefined;
-    return providerOptions?.clarit as ClaritProviderOptions | undefined;
+    return options.providerOptions?.clarit as ClaritProviderOptions | undefined;
   }
 
   private extractRidFromResult(
-    result: Awaited<ReturnType<LanguageModelV1['doGenerate']>>,
+    result: LanguageModelV3GenerateResult,
   ): string | undefined {
-    // Try to get rid from the raw response body
-    const rawResponse = result.rawResponse as Record<string, unknown> | undefined;
-    if (rawResponse) {
-      // The OpenAI-format response has `id` at the top level
-      if (typeof rawResponse.id === 'string') return rawResponse.id;
-      // Some providers nest it in body
-      const body = rawResponse.body as Record<string, unknown> | undefined;
-      if (typeof body?.id === 'string') return body.id;
-    }
+    // V3: response.id
+    if (result.response?.id) return result.response.id;
+
+    // V3: response.body?.id
+    const body = result.response?.body as Record<string, unknown> | undefined;
+    if (typeof body?.id === 'string') return body.id;
 
     // Try provider metadata
     const meta = result.providerMetadata;
