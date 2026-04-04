@@ -165,4 +165,43 @@ describe('hasUnsupportedContent', () => {
   it('returns true for empty prompt array', () => {
     expect(hasUnsupportedContent([])).toBe(true);
   });
+
+  // Regression: runtime guards against malformed shapes
+  it('returns true when prompt contains null entries', () => {
+    expect(hasUnsupportedContent([null as unknown])).toBe(true);
+  });
+
+  it('returns true when prompt contains undefined entries', () => {
+    expect(hasUnsupportedContent([undefined as unknown])).toBe(true);
+  });
+
+  it('returns true when prompt contains primitive values', () => {
+    expect(hasUnsupportedContent([42 as unknown])).toBe(true);
+    expect(hasUnsupportedContent(['hello' as unknown])).toBe(true);
+    expect(hasUnsupportedContent([true as unknown])).toBe(true);
+  });
+
+  it('returns true when a message has null content', () => {
+    expect(hasUnsupportedContent([{ role: 'user', content: null }])).toBe(true);
+  });
+
+  it('returns true when a message has undefined content', () => {
+    expect(hasUnsupportedContent([{ role: 'user', content: undefined }])).toBe(true);
+  });
+
+  it('returns true when content array has non-object parts', () => {
+    expect(
+      hasUnsupportedContent([
+        { role: 'user', content: ['raw string' as unknown] },
+      ]),
+    ).toBe(true);
+  });
+
+  it('returns true when content array has null parts', () => {
+    expect(
+      hasUnsupportedContent([
+        { role: 'user', content: [null as unknown] },
+      ]),
+    ).toBe(true);
+  });
 });
