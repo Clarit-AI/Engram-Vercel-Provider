@@ -45,8 +45,9 @@ export interface TokenizeChatResponse {
   success: boolean;
   token_ids?: number[];
   token_count?: number;
-  chat_template_name?: string;
+  chat_template_name?: string | null;
   message?: string;
+}
 }
 
 // ─── List Snapshots ──────────────────────────────────────────────────────────
