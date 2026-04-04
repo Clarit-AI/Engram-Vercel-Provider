@@ -10,13 +10,11 @@ import type {
 
 /**
  * Result of checking whether a snapshot's fill_ids is a prefix of the full token array.
+ * Discriminated union — when isAppend is true, continuationIds is always present.
  */
-export interface AppendOnlyCheckResult {
-  /** Whether the snapshot fill_ids is an exact prefix of the full token IDs. */
-  isAppend: boolean;
-  /** The unsaved delta tokens (only present when isAppend is true and there are new tokens). */
-  continuationIds?: number[];
-}
+export type AppendOnlyCheckResult =
+  | { isAppend: false }
+  | { isAppend: true; continuationIds: number[] };
 
 /**
  * Check whether snapshot fill_ids form an exact prefix of the full token array,
@@ -67,6 +65,11 @@ export function hasUnsupportedContent(
   }
 
   for (const message of prompt) {
+    // Guard against null, undefined, or non-object entries
+    if (message == null || typeof message !== 'object') {
+      return true;
+    }
+
     const msg = message as Record<string, unknown>;
     const content = msg.content;
 
@@ -84,7 +87,7 @@ export function hasUnsupportedContent(
     if (Array.isArray(content)) {
       for (const part of content) {
         const p = part as Record<string, unknown>;
-        if (typeof p !== 'object' || p.type !== 'text') {
+        if (!p || typeof p !== 'object' || p.type !== 'text') {
           return true;
         }
       }

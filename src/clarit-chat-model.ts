@@ -166,7 +166,7 @@ export class ClaritChatModel implements LanguageModelV3 {
     if (!claritOpts.maxNewTokens || claritOpts.maxNewTokens <= 0) {
       return this.doCompatibilityFallback(
         options, claritOpts, baseCompatMeta,
-        'disabled', false,
+        'missing-max-tokens', false,
       );
     }
 
@@ -218,7 +218,7 @@ export class ClaritChatModel implements LanguageModelV3 {
     }
 
     // Step 3: Check append-only
-    const check = isAppendOnly(fillIds!, fullTokenIds);
+    const check = isAppendOnly(fillIds, fullTokenIds);
     if (!check.isAppend) {
       return this.doCompatibilityFallback(
         options, claritOpts, baseCompatMeta,
@@ -252,8 +252,8 @@ export class ClaritChatModel implements LanguageModelV3 {
       compatibilityResult: 'fast-path',
       snapshotLookupHit: true,
       tokenizationSource: 'server-chat-template',
-      reusedTokenCount: fillIds!.length,
-      continuationTokenCount: check.continuationIds!.length,
+      reusedTokenCount: fillIds.length,
+      continuationTokenCount: check.continuationIds.length,
     } as ClaritResponseMetadata;
 
     // Auto-save the newly generated state
@@ -579,13 +579,14 @@ export class ClaritChatModel implements LanguageModelV3 {
     return options.prompt.map((msg) => {
       const message = msg as Record<string, unknown>;
       const rawRole = String(message.role ?? 'user');
-      const role = (['system', 'user', 'assistant'].includes(rawRole)
-        ? rawRole as TokenizeChatMessage['role']
-        : 'user'); // fallback to user for unknown roles
+      const role: TokenizeChatMessage['role'] =
+        rawRole === 'system' || rawRole === 'user' || rawRole === 'assistant'
+          ? rawRole as TokenizeChatMessage['role']
+          : 'user';
 
       // Handle string content
       if (typeof message.content === 'string') {
-        return { role: role as TokenizeChatMessage['role'], content: message.content };
+        return { role, content: message.content };
       }
 
       // Handle array content (text parts only — unsupported content already gated)
@@ -593,10 +594,10 @@ export class ClaritChatModel implements LanguageModelV3 {
         const textParts = (message.content as Array<Record<string, unknown>>)
           .filter((p) => p.type === 'text')
           .map((p) => String(p.text ?? ''));
-        return { role: role as TokenizeChatMessage['role'], content: textParts.join('\n') };
+        return { role, content: textParts.join('\n') };
       }
 
-      return { role: role as TokenizeChatMessage['role'], content: '' };
+      return { role, content: '' };
     });
   }
 

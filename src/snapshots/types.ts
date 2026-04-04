@@ -45,6 +45,7 @@ export interface TokenizeChatResponse {
   success: boolean;
   token_ids?: number[];
   token_count?: number;
+  /** Null when the template name cannot be determined. */
   chat_template_name?: string | null;
   message?: string;
 }

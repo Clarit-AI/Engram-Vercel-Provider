@@ -84,7 +84,7 @@ export interface ClaritProviderOptions {
  * Reasons the compatibility bridge fell back to stateless mode.
  */
 export type CompatibilityFallbackReason =
-  | 'disabled'
+  | 'missing-max-tokens'
   | 'no-snapshot'
   | 'fill-ids-missing'
   | 'prefix-mismatch'
