@@ -43,7 +43,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Clarit-AI/vercel-ai-provider"
+    "url": "https://github.com/Clarit-AI/Engram-Vercel-Provider"
   },
   "peerDependencies": {
     "ai": ">=5.0.0"
