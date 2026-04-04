@@ -48,7 +48,6 @@ export interface TokenizeChatResponse {
   chat_template_name?: string | null;
   message?: string;
 }
-}
 
 // ─── List Snapshots ──────────────────────────────────────────────────────────
 

@@ -72,10 +72,73 @@ const { text: recalled } = await generateText({
 |--------|------|-------------|
 | `conversationId` | `string` | Stable ID for grouping conversation snapshots. |
 | `turnNumber` | `number` | The turn index to save to or restore from. |
+| `branchName` | `string` | Alternate conversation branch name. |
 | `autoSaveSnapshot` | `boolean` | Save state after generation completes (best-effort). |
 | `restoreBeforeGenerate` | `boolean` | Mode: Restore state -> Append tokens -> Generate. |
 | `continuationIds` | `number[]` | Token IDs for the new turn (required for restore mode). |
 | `maxNewTokens` | `number` | Max tokens to generate in restore mode. |
+| `compatibilityMode` | `'append-only' \| false` | Enable stateless compatibility bridge (`@experimental`). |
+
+## Compatibility Mode (`@experimental`)
+
+For chat harnesses that don't natively manage Engram state, the **append-only compatibility bridge** automatically detects when new messages are an extension of a previously snapshotted conversation and takes the fast-path (restore-and-generate), falling back to standard `/v1/chat/completions` otherwise.
+
+```typescript
+import { type ClaritResponseMetadata } from '@clarit.ai/vercel-ai-provider';
+
+const { text, providerMetadata } = await generateText({
+  model: clarit('granite-4.0-h-small'),
+  messages: [
+    { role: 'system', content: 'You are helpful.' },
+    { role: 'user', content: 'Hello!' },
+    { role: 'assistant', content: 'Hi there!' },
+    { role: 'user', content: 'What is 2+2?' },  // ← new message appended
+  ],
+  providerOptions: {
+    clarit: {
+      conversationId: 'session-123',
+      autoSaveSnapshot: true,
+      compatibilityMode: 'append-only',
+      maxNewTokens: 128,  // required for fast-path
+    },
+  },
+});
+
+// Check what happened
+const meta = providerMetadata?.clarit as ClaritResponseMetadata;
+console.log(meta.compatibilityResult); // 'fast-path' | 'fallback'
+```
+
+### How it works
+
+1. Tokenizes the full message list via the server's `/tokenize_chat` endpoint.
+2. Fetches the latest snapshot's `fill_ids` (cached tokens) via `/get_snapshot_info`.
+3. Checks whether the new messages are a pure **append** on top of the snapshot using `isAppendOnly()`.
+4. **Fast-path**: If append-only, restores the snapshot and sends only the delta tokens — skips re-prefilling the entire conversation.
+5. **Fallback**: If the conversation was edited, contains unsupported content, or no snapshot exists, falls back to standard generation.
+
+### Fallback reasons
+
+| Reason | Meaning |
+|--------|---------|
+| `disabled` | `maxNewTokens` not set or zero. |
+| `no-snapshot` | No snapshot found for the conversation. |
+| `fill-ids-missing` | Snapshot exists but has no `fill_ids`. |
+| `prefix-mismatch` | Messages were edited (not an append-only extension). |
+| `unsupported-content` | Prompt contains tool calls, files, or other non-text content. |
+| `tokenization-error` | Server-side tokenization failed. |
+| `missing-conversation-id` | No `conversationId` provided. |
+
+### Response metadata
+
+When compatibility mode is active, `providerMetadata.clarit` includes diagnostics:
+
+| Field | Description |
+|-------|-------------|
+| `compatibilityResult` | `'fast-path'` or `'fallback'` |
+| `fallbackReason` | Why fallback was taken (see table above) |
+| `reusedTokenCount` | Tokens reused from snapshot (fast-path only) |
+| `continuationTokenCount` | New delta tokens sent (fast-path only) |
 
 ## Snapshot Management
 
