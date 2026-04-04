@@ -56,9 +56,41 @@ export interface ClaritProviderOptions {
   /**
    * Max new tokens for restore-and-generate mode.
    * Required when `restoreBeforeGenerate` is true.
+   * Also reused by compatibility mode fast-path.
    */
   maxNewTokens?: number;
+
+  // --- Compatibility bridge ---
+
+  /**
+   * Enable stateless compatibility mode for legacy chat harnesses.
+   *
+   * When set to `'append-only'`, the provider will:
+   * 1. Tokenize messages via the server's `/tokenize_chat` endpoint
+   * 2. Fetch the latest snapshot's `fill_ids` from `/get_snapshot_info`
+   * 3. If the incoming messages are an append-only extension of the
+   *    snapshotted state, use restore-and-generate (fast path)
+   * 4. Otherwise, fall back to standard `/v1/chat/completions`
+   *
+   * Requires `conversationId` and `autoSaveSnapshot: true` for best results.
+   * Requires `maxNewTokens` for the fast path.
+   *
+   * @experimental
+   */
+  compatibilityMode?: 'append-only' | false;
 }
+
+/**
+ * Reasons the compatibility bridge fell back to stateless mode.
+ */
+export type CompatibilityFallbackReason =
+  | 'disabled'
+  | 'no-snapshot'
+  | 'fill-ids-missing'
+  | 'prefix-mismatch'
+  | 'unsupported-content'
+  | 'tokenization-error'
+  | 'missing-conversation-id';
 
 /**
  * Metadata returned in `providerMetadata.clarit` after generation.
@@ -84,4 +116,27 @@ export interface ClaritResponseMetadata {
 
   /** Error message if auto-save failed (save is best-effort). */
   snapshotSaveError?: string;
+
+  // --- Compatibility bridge diagnostics ---
+
+  /** Echoes the input compatibility mode config. */
+  compatibilityMode?: 'disabled' | 'append-only';
+
+  /** Outcome of compatibility bridge evaluation. */
+  compatibilityResult?: 'fast-path' | 'fallback' | 'not-applicable';
+
+  /** Why fallback was taken (only when compatibilityResult is 'fallback'). */
+  fallbackReason?: CompatibilityFallbackReason;
+
+  /** Whether a snapshot was found for the conversation. */
+  snapshotLookupHit?: boolean;
+
+  /** How token IDs were obtained. Reinforces server-side truth. */
+  tokenizationSource?: 'server-chat-template';
+
+  /** Tokens reused from snapshot (fast-path only). */
+  reusedTokenCount?: number;
+
+  /** New tokens sent as continuation (fast-path only). */
+  continuationTokenCount?: number;
 }
